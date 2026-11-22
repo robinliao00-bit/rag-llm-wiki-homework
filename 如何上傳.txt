@@ -1,0 +1,1 @@
+這是修復 GitHub Pages 未載入 CSS 的自包含版本。只需要將四個 HTML 檔案上傳至 GitHub 儲存庫根目錄，取代同名檔案，無須 assets 資料夾即可顯示完整排版。注意：GitHub Pages 的 Settings > Pages 需指向 main / (root)。
