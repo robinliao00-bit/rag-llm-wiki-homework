@@ -1,0 +1,38 @@
+RAG LLM Wiki workflow validation / 2026-11-23
+01 / INGEST actual six curated source notes
+INGEST S06 955 bytes ef046b7261c0
+TOTAL_INGESTED 6
+
+02 / NEGATIVE TEST: slide case (id=case) source changed to S99 in a temporary JSON test copy
+INFO SOURCES=6
+INFO INGESTED=6
+INFO WIKI_PAGES=10
+INFO SLIDES=15
+INFO USED_SOURCES=7
+INFO STRUCTURE_ONLY: semantic faithfulness still needs human review
+FAIL UNKNOWN_SLIDE_SOURCE case: S99
+exit_code=1 (expected 1)
+
+03 / POSITIVE TEST: correct real wiki content.json
+INFO SOURCES=6
+INFO INGESTED=6
+INFO WIKI_PAGES=10
+INFO SLIDES=15
+INFO USED_SOURCES=6
+INFO STRUCTURE_ONLY: semantic faithfulness still needs human review
+PASS SOURCE_LINEAGE_AND_STRUCTURE
+exit_code=0 (expected 0)
+
+04 / BUILD: programmatic source-lineage gate before HTML output
+04 / BUILD result:
+BUILD index.html, wiki.html, slides.html, workflow.html
+PASS BUILD_AFTER_LINT
+
+05 / MANUAL FACT CHECK SCOPE:
+Structural checks succeeded. Claims and pedagogical clarity still require human review against original sources.
+
+06 / BROWSER SMOKE TEST:
+slides.html: initial cover renders, ArrowRight -> 2 / 15
+wiki.html: BM25 search -> 2 matching entries, retrieval page navigation renders
+workflow.html: title renders
+JavaScript page errors: []

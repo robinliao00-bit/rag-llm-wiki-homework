@@ -1,0 +1,39 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Loop / Graph · RAG Wiki 作業紀錄</title><link rel="stylesheet" href="assets/site.css"><style>.flowwrap{display:grid;grid-template-columns:1fr 1fr;gap:17px}.step-card{border:1px solid var(--line);border-radius:16px;background:var(--surface);padding:21px}.step-card strong{font-size:1.16rem}.step-card p{color:#c6d6ea;margin-bottom:0}.tag{font-size:.75rem;color:var(--cyan);font-weight:900;letter-spacing:.12em}.audit{white-space:pre-wrap;overflow:auto;background:#080e19;border:1px solid #3c526c;border-radius:15px;padding:18px;color:#cce2ec;font-size:.81rem}.path{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:30px 0}.path span:not(.arrow){padding:13px 15px;background:#19445a;border:1px solid #417483;border-radius:11px;font-weight:800}@media(max-width:700px){.flowwrap{grid-template-columns:1fr}}</style></head><body><div class="bg-orb"></div><header class="global"><a class="brand" href="index.html">RAG<span>.wiki</span></a><nav><a href="index.html">首頁</a><a href="wiki.html">知識 Wiki</a><a href="slides.html">教學簡報</a><a class="active" href="workflow.html">流程與紀錄</a></nav></header><main class="container"><span class="pill">ASSIGNMENT REPORT / LLM WIKI</span><div class="hero" style="padding-top:30px"><h1>從 6 份資料到<br><em>15 頁有引用的簡報。</em></h1><p>本頁解釋 Loop / Graph 的設計、驗證位置、真實執行紀錄，以及根據檢查結果所做的修正。</p></div><h2 class="section-title">Graph：雙層驗證，失敗會返回上游</h2><div class="path"><span>先討論教學目標</span><b class="arrow">→</b><span>Ingest × 6</span><b class="arrow">→</b><span>LLM Wiki</span><b class="arrow">→</b><span>Lint / 檢查</span><b class="arrow">→</b><span>產生 HTML</span></div><div class="note">↺ 若來源漏引、Wiki 交叉連結斷裂、投影片對不到 Wiki：檢查不通過，回到來源／Wiki／投影片草稿修正，重新執行驗證。瀏覽完成後再做人工內容審閱。</div><div class="flowwrap" style="margin-top:20px"><div class="step-card"><div class="tag">NODE 01</div><strong>先討論（Planning）</strong><p>定義受眾為「完全沒學過 RAG 的同學」，決定教學順序與避開艱深公式。</p></div><div class="step-card"><div class="tag">NODE 02 / LOOP A</div><strong>來源整理（Ingest）</strong><p>逐篇記錄可信來源的網址、作者、文獻主題與可支持的知識要點；六篇全部形成原始筆記。</p></div><div class="step-card"><div class="tag">NODE 03</div><strong>LLM 整理（Wiki Synthesis）</strong><p>根據筆記由 LLM 整理 10 個概念頁，保留文獻出處和 Wiki 條目間的 crosslink。</p></div><div class="step-card"><div class="tag">NODE 04 / LOOP B</div><strong>檢查（Lint Gate）</strong><p>驗證每頁有來源、來源存在、Wiki 連結有效、簡報來源可被對應 Wiki 支持。出錯則阻止 build。</p></div><div class="step-card"><div class="tag">NODE 05</div><strong>製作教學 HTML</strong><p>同一份 Wiki 知識結構生成 Wiki 入口與投影片，兩個網站都帶有來源反向連結。</p></div><div class="step-card"><div class="tag">NODE 06 / REVIEW</div><strong>人工審查與再修正</strong><p>檢查初學者能否理解、虛構例子是否被誤解為真實政策，以及重要主張是否忠於原文。若不合格回到相應節點。</p></div></div><h2 class="section-title">實際執行：故意注入一個壞引用，檢查有沒有擋下來</h2><p>測試時把某張投影片的來源改成不存在的 <code>S99</code>（只是測試副本），執行 check 得到 FAIL；修正為已被 Wiki 條目引用的來源後重新檢查，得到 PASS。這個測試驗證的是來源 ID 一致性，<strong>不代表引用內容已被自動做語意查核</strong>。</p><pre class="audit">RAG LLM Wiki workflow validation / 2026-11-23
+01 / INGEST actual six curated source notes
+INGEST S06 955 bytes ef046b7261c0
+TOTAL_INGESTED 6
+
+02 / NEGATIVE TEST: slide case (id=case) source changed to S99 in a temporary JSON test copy
+INFO SOURCES=6
+INFO INGESTED=6
+INFO WIKI_PAGES=10
+INFO SLIDES=15
+INFO USED_SOURCES=7
+INFO STRUCTURE_ONLY: semantic faithfulness still needs human review
+FAIL UNKNOWN_SLIDE_SOURCE case: S99
+exit_code=1 (expected 1)
+
+03 / POSITIVE TEST: correct real wiki content.json
+INFO SOURCES=6
+INFO INGESTED=6
+INFO WIKI_PAGES=10
+INFO SLIDES=15
+INFO USED_SOURCES=6
+INFO STRUCTURE_ONLY: semantic faithfulness still needs human review
+PASS SOURCE_LINEAGE_AND_STRUCTURE
+exit_code=0 (expected 0)
+
+04 / BUILD: programmatic source-lineage gate before HTML output
+04 / BUILD result:
+BUILD index.html, wiki.html, slides.html, workflow.html
+PASS BUILD_AFTER_LINT
+
+05 / MANUAL FACT CHECK SCOPE:
+Structural checks succeeded. Claims and pedagogical clarity still require human review against original sources.
+
+06 / BROWSER SMOKE TEST:
+slides.html: initial cover renders, ArrowRight -&gt; 2 / 15
+wiki.html: BM25 search -&gt; 2 matching entries, retrieval page navigation renders
+workflow.html: title renders
+JavaScript page errors: []
+</pre><h2 class="section-title">反思與修改</h2><div class="flowwrap"><div class="step-card"><div class="tag">最容易出錯</div><strong>簡報引用／Wiki 對應節點</strong><p>若只在簡報最後才加上來源，容易出現來源不存在或不是來自該 Wiki 頁面的問題。</p></div><div class="step-card"><div class="tag">修改後</div><strong>把檢查移到 HTML 產生之前</strong><p>從「先 build 再補救」改為「先驗證再 build」，修正時不需反覆調整已產生的 HTML。</p></div></div><h2 class="section-title">什麼仍需要人工確認？</h2><p>檔案 SHA-256、來源 ID、交叉連結及數量等可以被程式自動檢查，但「這份文獻是否真的支持這句話」以及「是否教得夠清楚」仍須逐段人工核對。公開案例中的訂單、政策為虛構演示，不能作為實際決策依據。</p><div class="actions"><a class="btn primary" href="slides.html">觀看教學簡報 →</a><a class="btn" href="wiki.html#workflow">閱讀 Workflow Wiki</a></div></main><footer class="foot">workflow / audit record · 此站檔案無須連上 API 也可離線開啟，外部來源連結需網路</footer></body></html>
